@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detuned Cosmology: Glowing Observation Module V7.2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap');
+body {
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+    background-color: #0d1117;
+    color: #e6e6e6;
+    min-height: 100vh;
+    padding: 20px;
+    overflow-x: hidden;
+}
+.container {
+    background-color: #161b22;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 255, 255, 0.2), 0 0 30px rgba(0, 255, 255, 0.4);
+    max-width: 1200px;
+    width: 100%;
+    margin: auto;
+}
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: #2d3748;
+    outline: none;
+    border-radius: 4px;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #00ffff;
+    cursor: pointer;
+    box-shadow: 0 0 15px #00ffff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+.tab-button {
+    border-bottom: 3px solid transparent;
+    color: #9ca3af;
+    transition: all 0.3s;
+}
+.tab-button:hover { color: #fff; background-color: #2d3748; }
+.tab-button.active {
+    background-color: #00ffff40;
+    color: #00ffff;
+    border-bottom: 3px solid #00ffff;
+}
+.heatmap-table { border-collapse: collapse; width: 100%; }
+.heatmap-table th, .heatmap-table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #2d3748;
+    min-width: 100px;
+}
+.heatmap-table th { background-color: #2d3748; color: #f3f4f6; }
+.heatmap-cell {
+    transition: background-color 0.4s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    font-weight: bold;
+    color: #fff;
+}
+.heatmap-cell:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    z-index: 10;
+    position: relative;
+}
+.anomaly-card {
+    transition: all 0.5s ease;
+    animation: fadeIn 0.8s ease forwards;
+    border-left: 5px solid;
+}
+@keyframes fadeIn { from {opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
+.starfield {
+    position: fixed;
+    top:0; left:0;
+    width:200%; height:200%;
+    background: radial-gradient(circle, #0ff 1px, transparent 1px) repeat;
+    background-size: 4px 4px;
+    animation: moveStars 200s linear infinite;
+    opacity: 0.3;
+    z-index: -1;
+}
+@keyframes moveStars { from {transform: translate(0,0);} to {transform: translate(-50%, -50%);} }
+.progress-bar {
+    height: 10px;
+    background-color: #2d3748;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    background-color: #00ffff;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 5px #00ffff;
+}
+.toggle-btn {
+    transition: all 0.3s ease;
+}
+.toggle-btn.disabled {
+    opacity: 0.4;
+    filter: grayscale(1);
+    background-color: #2d3748 !important; /* Adjust background color when disabled */
+}
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-top: 20px;
+}
+/* Custom Modal Style */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.modal-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+.modal-content {
+    background-color: #1f2937;
+    border-radius: 12px;
+    padding: 30px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 0 50px rgba(0, 255, 255, 0.5);
+    animation: modalBounce 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes modalBounce {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+</style>
+</head>
+<body>
+<div class="starfield"></div>
+<div class="container space-y-8">
+    <h1 class="text-3xl font-bold text-center text-[#00ffff] mb-6">Detuned Cosmology: Glowing Observation Module V7.2 🛰️📊</h1>
+
+    <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 p-6 rounded-xl border border-purple-500/50">
+        <button id="theoryToggle" class="w-full flex items-center justify-between text-left">
+            <h2 class="text-xl font-semibold text-purple-300">📖 Theoretical Background (Click to Expand)</h2>
+            <span id="theoryIcon" class="text-2xl">▼</span>
+        </button>
+        <div id="theoryContent" class="hidden mt-4 space-y-3 text-sm text-gray-300 leading-relaxed">
+            <p><strong class="text-cyan-400">What is Detuned Cosmology?</strong></p>
+            <p>This thought experiment hypothesizes that our universe is a "simulation optimized to conserve computational resources."</p>
+            <p><strong class="text-yellow-400">Detune Rate:</strong> The magnitude of deviation from perfect physical laws (Level 0). A higher rate means "traces of design" are more likely to be observed.</p>
+            <p><strong class="text-pink-400">Anomaly:</strong> Interpreted "unnatural phenomena" in quantum mechanics or relativity as evidence of simulation optimization.</p>
+            <p class="italic text-purple-300">※ Purely fictional; it has no scientific basis.</p>
+        </div>
+    </div>
+
+    <div class="flex border-b border-gray-700 mb-6">
+        <button id="tabSingle" class="tab-button active flex-1 py-3 text-lg font-medium">🔭 Single Observation</button>
+        <button id="tabStatistical" class="tab-button flex-1 py-3 text-lg font-medium">📊 Statistical Analysis</button>
+        <button id="tabHistory" class="tab-button flex-1 py-3 text-lg font-medium">📜 History</button>
+        <button id="tabComparison" class="tab-button flex-1 py-3 text-lg font-medium">📈 Comparative Analysis</button>
+    </div>
+
+    <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-cyan-700 space-y-4">
+        <h2 class="text-xl font-semibold mb-4 text-cyan-400">Common Simulation Settings</h2>
+        <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-6">
+            <label for="detuneRate" class="text-lg font-medium whitespace-nowrap">Detune Rate</label>
+            <div class="flex-grow"><input type="range" id="detuneRate" min="0.00" max="0.20" step="0.005" value="0.15"></div>
+            <span id="rateValue" class="text-2xl font-mono w-20 text-right text-yellow-400">0.150</span>
+        </div>
+        <div class="pt-4 border-t border-gray-700">
+            <h3 class="text-lg font-semibold mb-3 text-pink-400">Anomaly Settings</h3>
+            <div id="anomalyToggles" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+        </div>
+    </div>
+
+    <div id="singleView" class="space-y-6">
+        <button id="simulateButton" class="w-full py-3 px-4 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg shadow-xl shadow-pink-500/50 transition">
+            🔭 Run Single Observation!
+        </button>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-1 bg-gray-800 p-6 rounded-xl border border-cyan-700 space-y-4">
+                <h3 class="text-lg font-semibold text-cyan-400 border-b border-cyan-700 pb-2">Observation Summary</h3>
+                <p class="text-sm text-gray-400">Conflict Score</p>
+                <div><span id="conflictScore" class="text-4xl font-extrabold text-red-500 font-mono transition-colors duration-500">0.0000</span></div>
+                <p class="text-sm text-gray-400">Anomaly Count</p>
+                <div id="anomalyCount" class="text-3xl font-extrabold text-green-400 font-mono transition-colors duration-500">0</div>
+                <p class="text-sm text-gray-400 mt-4">Stability Rating</p>
+                <p id="stabilityText" class="text-base font-bold">Extremely Stable</p>
+            </div>
+            <div class="md:col-span-2 bg-gray-800 p-6 rounded-xl border border-cyan-700">
+                <h2 class="text-xl font-semibold mb-4 text-pink-400">👾 Observed Anomalies</h2>
+                <div id="anomalyList" class="space-y-3">
+                    <p class="text-gray-500 italic">Run an observation.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statisticalView" class="space-y-6 hidden">
+        <div class="bg-gray-800 p-6 rounded-xl border border-cyan-700 space-y-4">
+            <h2 class="text-xl font-semibold text-pink-400">Statistical Analysis Settings</h2>
+            <div class="flex items-center space-x-4">
+                <label for="runsInput" class="whitespace-nowrap">Number of Runs</label>
+                <input type="number" id="runsInput" value="10000" min="1000" max="50000" step="1000" class="w-32 p-2 bg-gray-700 rounded text-center text-yellow-400 font-mono">
+            </div>
+            <button id="analyzeButton" class="w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-xl shadow-cyan-500/50 transition">
+            📊 Run Statistical Analysis!
+            </button>
+        </div>
+        <div id="statisticalResults" class="bg-gray-800 p-6 rounded-xl border border-cyan-700">
+            <h2 class="text-xl font-semibold mb-4 text-cyan-400">Co-occurrence Probability Matrix</h2>
+            <div id="heatmapContainer" class="overflow-x-auto">
+                <p class="text-gray-500 italic">Run statistical analysis to display the heatmap.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="historyView" class="space-y-6 hidden">
+        <div class="bg-gray-800 p-6 rounded-xl border border-cyan-700">
+            <h2 class="text-xl font-semibold mb-4 text-pink-400">📜 Observation History (Local Storage)</h2>
+            <button id="clearHistoryBtn" class="mb-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition">Clear History</button>
+            <div id="historyList" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <div id="comparisonView" class="space-y-6 hidden">
+        <div class="bg-gray-800 p-6 rounded-xl border border-cyan-700">
+            <h2 class="text-xl font-semibold mb-4 text-cyan-400">📈 Relationship between Detune Rate and Conflict Score</h2>
+            <p class="text-sm text-gray-400 mb-4">Run multiple observations with different Detune Rates to visualize the trend.</p>
+            <button id="runComparisonButton" class="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-xl shadow-purple-500/50 transition">
+                🔬 Run Comparative Analysis (20 Samples)
+            </button>
+            <div id="comparisonChart" class="chart-container mt-6"></div>
+        </div>
+    </div>
+</div>
+
+<div id="loadingIndicator" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
+<div class="text-center w-full max-w-sm p-6 bg-gray-900 rounded-xl shadow-2xl">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-cyan-500 mx-auto"></div>
+    <p id="loadingMessage" class="mt-4 text-xl text-cyan-400">Calculating… 💻</p>
+    <div class="mt-4 progress-bar">
+        <div id="progressBarFill" class="progress-fill" style="width: 0%;"></div>
+    </div>
+    <p id="progressText" class="mt-2 text-sm text-gray-400">0% Complete</p>
+</div>
+</div>
+
+<div id="customModal" class="modal-overlay">
+    <div class="modal-content text-center space-y-6">
+        <h3 class="text-xl font-bold text-pink-400 border-b border-pink-700 pb-2">🚨 WARNING: Delete History Data</h3>
+        <p class="text-gray-300">Are you sure you want to delete all observation history data?<br>This action cannot be undone.</p>
+        <div class="flex justify-center space-x-4">
+            <button id="modalConfirmBtn" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded transition shadow-lg shadow-red-500/30">
+                Yes, Delete
+            </button>
+            <button id="modalCancelBtn" class="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded transition">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ------------------------------
+// V7.2 Enhanced Core
+// ------------------------------
+
+const ANOMALIES_CONFIG = [
+    { id: 'A', name: 'Quantum Fog', desc: 'Diffusion of localized quantum structures.', baseProb: 0.20, sensitivity: 2.0, color: 'border-blue-500', icon: '🌀', enabled: true },
+    { id: 'B', name: 'Entropy Leak', desc: 'Unexpected collapse of informational order.', baseProb: 0.15, sensitivity: 3.5, color: 'border-purple-500', icon: '⚛️', enabled: true },
+    { id: 'C', name: 'Spacetime Wrinkle', desc: 'Subtle distortion near the observation module.', baseProb: 0.10, sensitivity: 5.0, color: 'border-yellow-500', icon: '🪐', enabled: true },
+    { id: 'D', name: 'Virtual Particle Surge', desc: 'Localized spike in vacuum energy.', baseProb: 0.05, sensitivity: 8.0, color: 'border-red-500', icon: '🔥', enabled: true },
+];
+
+let activeAnomalies = JSON.parse(JSON.stringify(ANOMALIES_CONFIG));
+const $ = (id)=>document.getElementById(id);
+
+const rateSlider = $('detuneRate');
+const rateValueSpan = $('rateValue');
+const tabSingle = $('tabSingle');
+const tabStatistical = $('tabStatistical');
+const tabHistory = $('tabHistory');
+const tabComparison = $('tabComparison');
+const singleView = $('singleView');
+const statisticalView = $('statisticalView');
+const historyView = $('historyView');
+const comparisonView = $('comparisonView');
+const simulateButton = $('simulateButton');
+const analyzeButton = $('analyzeButton');
+const runComparisonButton = $('runComparisonButton');
+const loadingIndicator = $('loadingIndicator');
+const progressBarFill = $('progressBarFill');
+const progressText = $('progressText');
+const loadingMessage = $('loadingMessage');
+const anomalyList = $('anomalyList');
+const conflictScoreSpan = $('conflictScore');
+const anomalyCountDiv = $('anomalyCount');
+const stabilityTextP = $('stabilityText');
+const heatmapContainer = $('heatmapContainer');
+const runsInput = $('runsInput');
+const anomalyTogglesContainer = $('anomalyToggles');
+const historyList = $('historyList');
+const clearHistoryBtn = $('clearHistoryBtn'); // ID change
+const comparisonChart = $('comparisonChart');
+const theoryToggle = $('theoryToggle');
+const theoryContent = $('theoryContent');
+const theoryIcon = $('theoryIcon');
+
+// Modal related elements
+const customModal = $('customModal');
+const modalConfirmBtn = $('modalConfirmBtn');
+const modalCancelBtn = $('modalCancelBtn');
+
+// Collapse/Expand Theory Description
+theoryToggle.onclick = () => {
+    const isHidden = theoryContent.classList.contains('hidden');
+    theoryContent.classList.toggle('hidden');
+    theoryIcon.textContent = isHidden ? '▲' : '▼';
+};
+
+// --- Anomaly Toggle Generation ---
+activeAnomalies.forEach(anomaly=>{
+    const btn = document.createElement('button');
+    btn.className = `toggle-btn p-3 rounded-lg border-2 ${anomaly.color} ${anomaly.enabled ? 'bg-cyan-700' : 'disabled'} text-white font-bold text-sm`;
+    btn.innerHTML = `${anomaly.icon}<br>${anomaly.name}`;
+    btn.onclick = ()=>{
+        anomaly.enabled = !anomaly.enabled;
+        btn.classList.toggle('disabled', !anomaly.enabled);
+        btn.classList.toggle('bg-cyan-700', anomaly.enabled);
+    };
+    anomalyTogglesContainer.appendChild(btn);
+});
+
+// --- Tab Switching ---
+const tabs = [
+    {btn: tabSingle, view: singleView},
+    {btn: tabStatistical, view: statisticalView},
+    {btn: tabHistory, view: historyView},
+    {btn: tabComparison, view: comparisonView}
+];
+
+tabs.forEach(({btn, view})=>{
+    btn.onclick = ()=>{
+        tabs.forEach(t=>{
+            t.btn.classList.remove('active');
+            t.view.classList.add('hidden');
+        });
+        btn.classList.add('active');
+        view.classList.remove('hidden');
+        // Reload history when switching to the History tab
+        if(view === historyView) loadHistory();
+    };
+});
+
+// --- Detune Rate Display Update ---
+rateSlider.oninput = ()=>rateValueSpan.textContent = parseFloat(rateSlider.value).toFixed(3);
+
+// --- Single Observation ---
+const getDetuneRate = ()=>parseFloat(rateSlider.value);
+
+const runSimulation = (detuneRate)=>{
+    let conflictScoreBase=0;
+    const observedAnomalies=[];
+    const enabledAnomalies = activeAnomalies.filter(a=>a.enabled);
+
+    enabledAnomalies.forEach(a=>{
+        const effectiveProb = Math.min(0.95, a.baseProb + detuneRate*a.sensitivity*(0.5+Math.random()));
+        if(Math.random()<effectiveProb) observedAnomalies.push({...a,intensity: Math.random()});
+        conflictScoreBase += effectiveProb;
+    });
+
+    const enabledCount = enabledAnomalies.length;
+    const conflictScore = enabledCount > 0 ? Math.min(1, conflictScoreBase/enabledCount) : 0;
+    return {conflictScore, observedAnomalies};
+};
+
+simulateButton.onclick = ()=>{
+    const detuneRate = getDetuneRate();
+    const results = runSimulation(detuneRate);
+
+    conflictScoreSpan.textContent = results.conflictScore.toFixed(4);
+    anomalyCountDiv.textContent = results.observedAnomalies.length;
+
+    // Stability Comment
+    const score = results.conflictScore;
+    let colorClass = '';
+    if(score<0.05) { stabilityTextP.textContent = "Extremely Stable"; colorClass = 'text-green-400'; }
+    else if(score<0.15) { stabilityTextP.textContent = "Stable"; colorClass = 'text-yellow-400'; }
+    else if(score<0.3) { stabilityTextP.textContent = "Caution"; colorClass = 'text-orange-500'; }
+    else { stabilityTextP.textContent = "Danger⚠️"; colorClass = 'text-red-500'; }
+
+    stabilityTextP.className = `text-base font-bold ${colorClass}`;
+    conflictScoreSpan.className = `text-4xl font-extrabold font-mono transition-colors duration-500 ${colorClass}`;
+
+    // Anomaly Details Display
+    anomalyList.innerHTML = '';
+    if(results.observedAnomalies.length===0){
+        anomalyList.innerHTML = '<p class="text-gray-500 italic">No anomaly detected</p>';
+    } else {
+        results.observedAnomalies.forEach(anomaly=>{
+            const card = document.createElement('div');
+            card.className = `anomaly-card bg-gray-900 p-3 rounded shadow ${anomaly.color}`;
+            card.innerHTML = `
+                <div class="flex items-center justify-between text-white">
+                    <span class="font-bold text-lg">${anomaly.icon} ${anomaly.name}</span>
+                    <span class="text-sm text-gray-400">${(anomaly.intensity*100).toFixed(1)}%</span>
+                </div>
+                <div class="mt-1 text-sm text-gray-300">${anomaly.desc}</div>
+                <div class="mt-2 text-xs">
+                    <span class="font-mono ${anomaly.color.replace('border','text')}">Intensity: ${anomaly.intensity.toFixed(3)}</span>
+                </div>
+            `;
+            anomalyList.appendChild(card);
+        });
+    }
+
+    // Save to Local Storage
+    saveToHistory({detuneRate, conflictScore: results.conflictScore, anomalyCount: results.observedAnomalies.length, timestamp: Date.now()});
+};
+
+// --- History Management (Local Storage) ---
+const saveToHistory = (entry) => {
+    let history = JSON.parse(localStorage.getItem('detuneHistory') || '[]');
+    history.push(entry);
+    if(history.length > 50) history = history.slice(-50); // Max 50 entries
+    localStorage.setItem('detuneHistory', JSON.stringify(history));
+    // Update history view if the history tab is open
+    if (!historyView.classList.contains('hidden')) loadHistory();
+};
+
+const loadHistory = () => {
+    const history = JSON.parse(localStorage.getItem('detuneHistory') || '[]');
+    historyList.innerHTML = '';
+    if(history.length === 0) {
+        historyList.innerHTML = '<p class="text-gray-500 italic">No history available</p>';
+        return;
+    }
+    history.slice(-10).reverse().forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'p-3 border border-gray-700 rounded bg-gray-900 text-sm';
+        const date = new Date(entry.timestamp).toLocaleString('en-US'); // Changed locale to US for standard format
+        div.innerHTML = `
+            <span class="text-gray-400">${date}</span> |
+            <span class="text-yellow-400 font-mono">Rate: ${entry.detuneRate.toFixed(3)}</span> |
+            <span class="text-pink-400 font-mono">Conflict: ${entry.conflictScore.toFixed(4)}</span> |
+            <span class="text-cyan-400">👾 ${entry.anomalyCount} events</span>
+        `;
+        historyList.appendChild(div);
+    });
+};
+
+// --- Modal Control ---
+const showModal = () => customModal.classList.add('open');
+const hideModal = () => customModal.classList.remove('open');
+
+const performClearHistory = () => {
+    localStorage.removeItem('detuneHistory');
+    loadHistory();
+    hideModal();
+};
+
+clearHistoryBtn.onclick = showModal;
+modalCancelBtn.onclick = hideModal;
+modalConfirmBtn.onclick = performClearHistory;
+
+// --- Statistical Analysis ---
+analyzeButton.onclick = async ()=>{
+    const detuneRate = getDetuneRate();
+    const runs = parseInt(runsInput.value)||10000;
+
+    // Do not process if no anomaly is enabled
+    const enabledAnomalies = activeAnomalies.filter(a=>a.enabled);
+    if (enabledAnomalies.length === 0) {
+        heatmapContainer.innerHTML = '<p class="text-red-400 italic">All anomalies are disabled. Please enable at least one.</p>';
+        return;
+    }
+
+    loadingIndicator.classList.remove('hidden');
+    loadingMessage.textContent = 'Analyzing Statistics… 🔬';
+
+    let heatmap = {};
+    enabledAnomalies.forEach(a1=>{
+        heatmap[a1.id]={};
+        enabledAnomalies.forEach(a2=>{
+            heatmap[a1.id][a2.id]=0;
+        });
+    });
+
+    for(let i=0;i<runs;i++){
+        const result = runSimulation(detuneRate);
+        const ids = result.observedAnomalies.map(a=>a.id);
+        ids.forEach(a1=>{
+            ids.forEach(a2=>{
+                if(heatmap[a1] && heatmap[a1][a2] !== undefined) heatmap[a1][a2] +=1;
+            });
+        });
+        if(i%200===0){
+            const p = Math.floor(i/runs*100);
+            progressBarFill.style.width=`${p}%`;
+            progressText.textContent=`${p}% Complete`;
+            // Asynchronous delay to maintain browser responsiveness
+            await new Promise(r=>setTimeout(r,0));
+        }
+    }
+
+    // Heatmap Display
+    const enabledIds = enabledAnomalies.map(a=>a.id);
+    let html=`<table class="heatmap-table"><tr><th></th>`;
+    enabledIds.forEach(id=>{ html+=`<th>${id}</th>` });
+    html+='</tr>';
+    enabledIds.forEach(id1=>{
+        html+=`<tr><th>${id1}</th>`;
+        enabledIds.forEach(id2=>{
+            const val = heatmap[id1][id2]/runs;
+            html+=`<td class="heatmap-cell" style="background-color: rgba(0,255,255,${val});">${(val*100).toFixed(1)}%</td>`;
+        });
+        html+='</tr>';
+    });
+    html+='</table>';
+    heatmapContainer.innerHTML = html;
+    loadingIndicator.classList.add('hidden');
+    progressBarFill.style.width = '0%';
+};
+
+// --- Comparative Analysis ---
+runComparisonButton.onclick = async () => {
+    loadingIndicator.classList.remove('hidden');
+    loadingMessage.textContent = 'Running Comparative Analysis… 📈';
+
+    const samples = 20;
+    const dataPoints = [];
+
+    for(let i=0; i<=samples; i++){
+        const rate = i * 0.01; // 0.00 ~ 0.20
+        const results = [];
+        for(let j=0; j<100; j++){ // 100 trials for each detune rate
+            // For comparative analysis, only the detune rate is considered (left to the simulation function)
+            results.push(runSimulation(rate).conflictScore);
+        }
+        const avg = results.reduce((a,b)=>a+b,0) / results.length;
+        dataPoints.push({rate, conflictScore: avg});
+
+        const p = Math.floor((i/samples)*100);
+        progressBarFill.style.width = `${p}%`;
+        progressText.textContent = `${p}% Complete`;
+        await new Promise(r=>setTimeout(r,0));
+    }
+
+    // Simple ASCII Chart
+    let chartHTML = '<div class="bg-gray-900 p-4 rounded">';
+    chartHTML += '<p class="text-sm text-gray-400 mb-2">Detune Rate (X-axis: 0.00 to 0.20) vs Average Conflict Score (Y-axis: 0.0 to Max)</p>';
+    chartHTML += '<pre class="text-xs text-cyan-400 font-mono overflow-x-auto">';
+
+    const maxScore = Math.max(...dataPoints.map(d=>d.conflictScore));
+    const height = 15;
+    for(let row=height; row>=0; row--){
+        let line = (row/height * maxScore).toFixed(2).padStart(5) + ' |';
+        dataPoints.forEach(d=>{
+            const normalized = d.conflictScore / maxScore;
+            line += normalized >= (row/height) ? '█' : ' ';
+        });
+        chartHTML += line + '\n';
+    }
+    chartHTML += '     +' + '─'.repeat(samples+1) + '\n';
+    chartHTML += '     ';
+    for(let i=0; i<=samples; i+=5){
+        chartHTML += (i*0.01).toFixed(2).padStart(5);
+    }
+    chartHTML += '</pre>';
+    chartHTML += '<p class="text-xs text-gray-400 mt-2">※ Average of 100 observations for each detune rate. Y-axis is normalized to the maximum value.</p>';
+    chartHTML += '</div>';
+
+    comparisonChart.innerHTML = chartHTML;
+    loadingIndicator.classList.add('hidden');
+    progressBarFill.style.width = '0%';
+};
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    loadHistory();
+    rateValueSpan.textContent = parseFloat(rateSlider.value).toFixed(3);
+
+    // Set the correct classes for anomaly toggles in the initial state
+    document.querySelectorAll('.toggle-btn').forEach((btn, index) => {
+        if (activeAnomalies[index] && activeAnomalies[index].enabled) {
+            btn.classList.add('bg-cyan-700');
+            btn.classList.remove('disabled');
+        } else {
+            btn.classList.add('disabled');
+            btn.classList.remove('bg-cyan-700');
+        }
+    });
+});
+</script>
+</body>
+</html>
